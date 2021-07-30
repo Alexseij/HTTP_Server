@@ -7,8 +7,9 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/Alexseij/handlers/auth"
+	"github.com/Alexseij/handlers/order"
 	"github.com/Alexseij/server/config"
-	"github.com/Alexseij/server/handlers"
 	"github.com/gorilla/mux"
 )
 
@@ -39,8 +40,9 @@ func main() {
 func buildHandler() http.Handler {
 	router := mux.NewRouter()
 
-	router.HandleFunc("/api/user/new", handlers.CreateUser).Methods("POST")
-	router.HandleFunc("/api/user/login", handlers.LoginUser).Methods("POST")
-	router.HandleFunc("/api/order/make", handlers.MakeOrder).Methods("POST")
+	router.HandleFunc("/api/user/new", auth.CreateUser).Methods("POST")
+	router.HandleFunc("/api/user/login", auth.LoginUser).Methods("POST")
+	router.HandleFunc("/api/order/make", order.MakeOrder).Methods("POST")
+
 	return router
 }
