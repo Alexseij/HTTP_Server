@@ -31,6 +31,7 @@ func LoginUser(rw http.ResponseWriter, r *http.Request) {
 	err := json.NewDecoder(r.Body).Decode(token)
 	if err != nil {
 		utils.Respond(rw, utils.Message(false, "Invalid request"))
+		return
 	}
 
 	resp := models.LoginUser(token.Token)

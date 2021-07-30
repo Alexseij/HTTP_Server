@@ -7,9 +7,9 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/Alexseij/handlers/auth"
-	"github.com/Alexseij/handlers/order"
 	"github.com/Alexseij/server/config"
+	"github.com/Alexseij/server/handlers/auth"
+	"github.com/Alexseij/server/handlers/order"
 	"github.com/gorilla/mux"
 )
 
@@ -43,6 +43,8 @@ func buildHandler() http.Handler {
 	router.HandleFunc("/api/user/new", auth.CreateUser).Methods("POST")
 	router.HandleFunc("/api/user/login", auth.LoginUser).Methods("POST")
 	router.HandleFunc("/api/order/make", order.MakeOrder).Methods("POST")
+	router.HandleFunc("/api/order/delete", order.DeleteOrderWithID).Methods("DELETE")
+	router.HandleFunc("/api/order/update", order.UpdateOrder).Methods("PUT")
 
 	return router
 }
