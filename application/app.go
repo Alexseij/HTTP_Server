@@ -5,12 +5,14 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/Alexseij/server/handlers/auth"
 	"github.com/Alexseij/server/handlers/order"
 	"github.com/gorilla/mux"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.mongodb.org/mongo-driver/mongo/readpref"
 )
 
 type ReqHandlerFunc func(*mongo.Database, http.ResponseWriter, *http.Request)
@@ -32,13 +34,22 @@ func (a *App) Init(dbUser, dbPassword, dbHost, dbName string) {
 
 	clientOptions := options.Client().ApplyURI(URI)
 
-	client, err := mongo.Connect(context.Background(), clientOptions)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	client, err := mongo.Connect(ctx, clientOptions)
 	if err != nil {
 		log.Fatal("file : db.go  , mongo.Connect() : ", err)
 	}
 
+	if err := client.Ping(ctx, readpref.Primary()); err != nil {
+		log.Fatal("Server dosent connect to database")
+	}
+
+	log.Print("Server connectrd to database")
+
 	a.DB = client.Database(dbName)
-	log.Print("Database created , Name : ", a.DB.Name())
+	log.Print("Current database name : ", a.DB.Name())
 
 	a.Router = mux.NewRouter()
 	a.setHandlers()

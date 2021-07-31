@@ -64,6 +64,7 @@ func DeleteOrder(db *mongo.Database, order *Order) map[string]interface{} {
 func FindOrder(db *mongo.Database, orderID primitive.ObjectID) (o *Order, err error) {
 	ordersCollection := db.Collection("orders")
 	ctx := context.TODO()
+
 	order := &Order{}
 
 	if err := ordersCollection.FindOne(ctx, bson.M{"_id": orderID}).Decode(order); err != nil {

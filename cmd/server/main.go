@@ -23,7 +23,7 @@ func main() {
 
 	err := godotenv.Load()
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("file main.go , godotenv.Load() : ", err)
 	}
 
 	dbUser := os.Getenv("db_user")
@@ -52,8 +52,11 @@ func main() {
 	<-c
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*15)
+
 	defer func() {
-		application.DB.Client().Disconnect(ctx)
+		if err := application.DB.Client().Disconnect(ctx); err != nil {
+			log.Fatal(err)
+		}
 		cancel()
 	}()
 
