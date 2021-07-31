@@ -2,12 +2,9 @@ package main
 
 import (
 	"flag"
-	"fmt"
-	"log"
 	"net/http"
 	"os"
 
-	"github.com/Alexseij/server/config"
 	"github.com/Alexseij/server/handlers/auth"
 	"github.com/Alexseij/server/handlers/order"
 	"github.com/gorilla/mux"
@@ -21,15 +18,8 @@ var flagConfig = flag.String("config", "../config/local.yml", "path to cofig fil
 
 func main() {
 
-	config, err := config.LoadCfg(*flagConfig)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	serverAddr := fmt.Sprintf("%s:%s", config.Server.Host, config.Server.Port)
-
 	server := &http.Server{
-		Addr:    serverAddr,
+		Addr:    "localhost:8000",
 		Handler: buildHandler(),
 	}
 	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {

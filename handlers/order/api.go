@@ -8,6 +8,7 @@ import (
 
 	"github.com/Alexseij/server/models"
 	"github.com/Alexseij/server/utils"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 func MakeOrder(rw http.ResponseWriter, r *http.Request) {
@@ -22,15 +23,15 @@ func MakeOrder(rw http.ResponseWriter, r *http.Request) {
 	utils.Respond(rw, resp)
 
 	if resp["status"].(bool) {
-		go deleteOrderAfterDelay(time.Second*30, resp["id"].(string), rw)
+		go deleteOrderAfterDelay(time.Second*30, resp["id"].(primitive.ObjectID), rw)
 	}
 
 }
 
-func deleteOrderAfterDelay(delay time.Duration, orderID string, rw http.ResponseWriter) {
+func deleteOrderAfterDelay(delay time.Duration, orderID primitive.ObjectID, rw http.ResponseWriter) {
 	done := make(chan struct{})
 	go func() {
-		time.Sleep(time.Second * 30)
+		time.Sleep(delay)
 		done <- struct{}{}
 	}()
 
@@ -40,7 +41,7 @@ func deleteOrderAfterDelay(delay time.Duration, orderID string, rw http.Response
 	}
 }
 
-func deleteOrder(rw http.ResponseWriter, orderID string) {
+func deleteOrder(rw http.ResponseWriter, orderID primitive.ObjectID) {
 	order, err := models.FindOrder(orderID)
 	if err != nil {
 		log.Print(err)
@@ -49,6 +50,7 @@ func deleteOrder(rw http.ResponseWriter, orderID string) {
 	}
 
 	if order == nil {
+		utils.Respond(rw, utils.Message(false, "Order alreay deleted"))
 		return
 	}
 
@@ -65,11 +67,19 @@ func DeleteOrderWithID(rw http.ResponseWriter, r *http.Request) {
 		utils.Respond(rw, utils.Message(false, "Invalid request"))
 		return
 	}
-	deleteOrder(rw, orderID.OrderID)
+
+	primitiveOrderID, err := primitive.ObjectIDFromHex(orderID.ID)
+	if err != nil {
+		log.Print(err)
+		utils.Respond(rw, utils.Message(false, "Invalid request"))
+		return
+	}
+
+	deleteOrder(rw, primitiveOrderID)
 }
 
 func UpdateOrder(rw http.ResponseWriter, r *http.Request) {
-	updateOrder := &models.OrderForUpdate{}
+	updateOrder := &models.Order{}
 
 	if err := json.NewDecoder(r.Body).Decode(updateOrder); err != nil {
 		log.Print(err)

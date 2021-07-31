@@ -14,11 +14,6 @@ import (
 
 var (
 	db *mongo.Database
-
-	dbUser     = os.Getenv("db_user")
-	dbPassword = os.Getenv("db_password")
-	dbHost     = os.Getenv("db_host")
-	dbName     = os.Getenv("db_name")
 )
 
 func init() {
@@ -26,6 +21,11 @@ func init() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	dbUser := os.Getenv("db_user")
+	dbPassword := os.Getenv("db_password")
+	dbHost := os.Getenv("db_host")
+	dbName := os.Getenv("db_name")
 
 	URI := fmt.Sprintf(
 		"mongodb+srv://%s:%s@%s/%s?retryWrites=true&w=majority",
@@ -41,9 +41,10 @@ func init() {
 	defer cancel()
 	client, err := mongo.Connect(ctx, clientOptions)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("file : db.go  , mongo.Connect() : ", err)
 	}
 	db = client.Database(dbName)
+	log.Print("Database created , Name : ", db.Name())
 }
 
 func GetDB() *mongo.Database {

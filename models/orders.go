@@ -7,41 +7,39 @@ import (
 
 	"github.com/Alexseij/server/utils"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
 type OrderID struct {
-	OrderID string `json:"order_id"`
+	ID string `json:"id" bson:"_id"`
 }
 
 type Order struct {
-	Description string    `json:"description"`
-	Name        string    `json:"name"`
-	From        string    `json:"from"`
-	Destination string    `json:"destination"`
-	TimeCreate  time.Time `json:"time_create"`
-	TimeUpdate  time.Time `json:"time_update"`
-
-	insertedID string
-}
-
-type OrderForUpdate struct {
-	Order
-	OrderID
+	OrderID     primitive.ObjectID `json:"id,omitempty" bson:"_id"`
+	Description string             `json:"description" bson:"description"`
+	Name        string             `json:"name" bson:"name"`
+	From        string             `json:"from" bson:"from"`
+	Destination string             `json:"destination" bson:"destination"`
+	TimeCreate  primitive.DateTime `bson:"time_create,omitempty"`
+	TimeUpdate  primitive.DateTime `bson:"time_update,omitempty"`
 }
 
 func (o *Order) MakeOrder() map[string]interface{} {
 	ordersCollection := GetDB().Collection("orders")
+	ctx := context.TODO()
 
-	o.TimeCreate = time.Now()
+	o.TimeCreate = primitive.NewDateTimeFromTime(time.Now())
+	o.TimeUpdate = primitive.NewDateTimeFromTime(time.Now())
+	o.OrderID = primitive.NewObjectID()
 
-	result, err := ordersCollection.InsertOne(context.TODO(), o)
+	result, err := ordersCollection.InsertOne(ctx, o)
 	if err != nil {
+		log.Print("file : orders.go , InserOne() : ", err)
 		return utils.Message(false, "Invalid request to database")
 	}
-	o.insertedID = result.InsertedID.(string)
 
-	log.Print("Order inserted in : ", o.TimeCreate, "with id : ", result.InsertedID)
+	log.Print("Order inserted in : ", o.TimeCreate, " with id : ", result.InsertedID)
 
 	resp := utils.Message(true, "Order added")
 	resp["id"] = result.InsertedID
@@ -51,9 +49,11 @@ func (o *Order) MakeOrder() map[string]interface{} {
 
 func DeleteOrder(order *Order) map[string]interface{} {
 	ordersCollection := GetDB().Collection("orders")
-	delResult, err := ordersCollection.DeleteOne(context.TODO(), bson.M{"_id": order.insertedID})
+	ctx := context.TODO()
+
+	delResult, err := ordersCollection.DeleteOne(ctx, bson.M{"_id": order.OrderID})
 	if err != nil {
-		log.Print(err)
+		log.Print("file : orders.go , DeleteOne() : ", err)
 		return utils.Message(false, "Invalid operation to delete order")
 	}
 	log.Print("Delete in : ", time.Now(), " count of elements : ", delResult.DeletedCount)
@@ -61,28 +61,31 @@ func DeleteOrder(order *Order) map[string]interface{} {
 	return utils.Message(true, "Order deleted")
 }
 
-func FindOrder(orderID string) (o *Order, err error) {
+func FindOrder(orderID primitive.ObjectID) (o *Order, err error) {
 	ordersCollection := GetDB().Collection("orders")
+	ctx := context.TODO()
+	order := &Order{}
 
-	var order *Order
-
-	if err := ordersCollection.FindOne(context.TODO(), bson.M{"_id": orderID}).Decode(order); err != nil {
+	if err := ordersCollection.FindOne(ctx, bson.M{"_id": orderID}).Decode(order); err != nil {
 		if err == mongo.ErrNoDocuments {
 			log.Print("Order already deleted")
 			return nil, nil
 		}
-		log.Print("Error conntection with database")
+		log.Print("file : orders.go , FindOne() : ", err)
 		return nil, err
 	}
 	return order, nil
 }
 
-func UpdateOrder(updateOrder *OrderForUpdate) map[string]interface{} {
+func UpdateOrder(updateOrder *Order) map[string]interface{} {
 	ordersCollection := GetDB().Collection("orders")
+	ctx := context.TODO()
 
-	_, err := ordersCollection.UpdateOne(context.TODO(), bson.M{"_id": updateOrder.OrderID}, updateOrder.Order)
+	updateOrder.TimeUpdate = primitive.NewDateTimeFromTime(time.Now())
+
+	_, err := ordersCollection.UpdateOne(ctx, bson.M{"_id": updateOrder.OrderID}, bson.M{"$set": updateOrder})
 	if err != nil {
-		log.Print(err)
+		log.Print("file : orders.go , UpdateOne() : ", err)
 		return utils.Message(false, "Ivalid request to database")
 	}
 
