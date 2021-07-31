@@ -57,16 +57,16 @@ func (u *User) Validate() (*idtoken.Payload, map[string]interface{}, bool) {
 
 }
 
-func (u *User) Create() map[string]interface{} {
+func (u *User) Create(db *mongo.Database) map[string]interface{} {
 	payload, resp, ok := u.Validate()
 	if !ok {
 		return resp
 	}
 
-	users := GetDB().Collection("users")
+	users := db.Collection("users")
 	ctx := context.TODO()
 
-	user, err := GetUser(u.Token)
+	user, err := GetUser(db, u.Token)
 	if err != nil {
 		log.Print(err)
 		return utils.Message(false, "Incorrect database query")
@@ -91,8 +91,8 @@ func (u *User) Create() map[string]interface{} {
 	return utils.Message(true, "User created !")
 }
 
-func GetUser(token string) (*User, error) {
-	usersCollection := GetDB().Collection("users")
+func GetUser(db *mongo.Database, token string) (*User, error) {
+	usersCollection := db.Collection("users")
 	ctx := context.TODO()
 
 	user := &User{}
@@ -108,8 +108,8 @@ func GetUser(token string) (*User, error) {
 	return user, nil
 }
 
-func LoginUser(token string) map[string]interface{} {
-	user, err := GetUser(token)
+func LoginUser(db *mongo.Database, token string) map[string]interface{} {
+	user, err := GetUser(db, token)
 	if err != nil {
 		log.Print(err)
 		return utils.Message(false, "Incorrect database query")

@@ -9,9 +9,10 @@ import (
 	"github.com/Alexseij/server/models"
 	"github.com/Alexseij/server/utils"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
-func MakeOrder(rw http.ResponseWriter, r *http.Request) {
+func MakeOrder(db *mongo.Database, rw http.ResponseWriter, r *http.Request) {
 	order := &models.Order{}
 
 	if err := json.NewDecoder(r.Body).Decode(order); err != nil {
@@ -19,16 +20,16 @@ func MakeOrder(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	resp := order.MakeOrder()
+	resp := order.MakeOrder(db)
 	utils.Respond(rw, resp)
 
 	if resp["status"].(bool) {
-		go deleteOrderAfterDelay(time.Second*30, resp["id"].(primitive.ObjectID), rw)
+		go deleteOrderAfterDelay(db, time.Second*30, resp["id"].(primitive.ObjectID), rw)
 	}
 
 }
 
-func deleteOrderAfterDelay(delay time.Duration, orderID primitive.ObjectID, rw http.ResponseWriter) {
+func deleteOrderAfterDelay(db *mongo.Database, delay time.Duration, orderID primitive.ObjectID, rw http.ResponseWriter) {
 	done := make(chan struct{})
 	go func() {
 		time.Sleep(delay)
@@ -37,12 +38,12 @@ func deleteOrderAfterDelay(delay time.Duration, orderID primitive.ObjectID, rw h
 
 	select {
 	case <-done:
-		deleteOrder(rw, orderID)
+		deleteOrder(db, rw, orderID)
 	}
 }
 
-func deleteOrder(rw http.ResponseWriter, orderID primitive.ObjectID) {
-	order, err := models.FindOrder(orderID)
+func deleteOrder(db *mongo.Database, rw http.ResponseWriter, orderID primitive.ObjectID) {
+	order, err := models.FindOrder(db, orderID)
 	if err != nil {
 		log.Print(err)
 		utils.Respond(rw, utils.Message(false, "Invalid delete from database"))
@@ -54,12 +55,12 @@ func deleteOrder(rw http.ResponseWriter, orderID primitive.ObjectID) {
 		return
 	}
 
-	resp := models.DeleteOrder(order)
+	resp := models.DeleteOrder(db, order)
 	utils.Respond(rw, resp)
 
 }
 
-func DeleteOrderWithID(rw http.ResponseWriter, r *http.Request) {
+func DeleteOrderWithID(db *mongo.Database, rw http.ResponseWriter, r *http.Request) {
 	orderID := &models.OrderID{}
 
 	if err := json.NewDecoder(r.Body).Decode(orderID); err != nil {
@@ -75,10 +76,10 @@ func DeleteOrderWithID(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	deleteOrder(rw, primitiveOrderID)
+	deleteOrder(db, rw, primitiveOrderID)
 }
 
-func UpdateOrder(rw http.ResponseWriter, r *http.Request) {
+func UpdateOrder(db *mongo.Database, rw http.ResponseWriter, r *http.Request) {
 	updateOrder := &models.Order{}
 
 	if err := json.NewDecoder(r.Body).Decode(updateOrder); err != nil {
@@ -87,12 +88,12 @@ func UpdateOrder(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	resp := models.UpdateOrder(updateOrder)
+	resp := models.UpdateOrder(db, updateOrder)
 
 	utils.Respond(rw, resp)
 }
 
-func GetOrder(rw http.ResponseWriter, r *http.Request) {
+func GetOrder(db *mongo.Database, rw http.ResponseWriter, r *http.Request) {
 
 	orderID := &models.OrderID{}
 
@@ -109,7 +110,7 @@ func GetOrder(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	order, err := models.FindOrder(primitiveOrderID)
+	order, err := models.FindOrder(db, primitiveOrderID)
 	if err != nil {
 		log.Print(err)
 		utils.Respond(rw, utils.Message(false, "Fail with getting order from db"))

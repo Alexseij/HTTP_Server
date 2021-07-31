@@ -6,9 +6,10 @@ import (
 
 	"github.com/Alexseij/server/models"
 	"github.com/Alexseij/server/utils"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
-func CreateUser(rw http.ResponseWriter, r *http.Request) {
+func CreateUser(db *mongo.Database, rw http.ResponseWriter, r *http.Request) {
 	token := &models.Token{}
 
 	err := json.NewDecoder(r.Body).Decode(token)
@@ -21,11 +22,11 @@ func CreateUser(rw http.ResponseWriter, r *http.Request) {
 		Token: token.Token,
 	}
 
-	resp := user.Create()
+	resp := user.Create(db)
 	utils.Respond(rw, resp)
 }
 
-func LoginUser(rw http.ResponseWriter, r *http.Request) {
+func LoginUser(db *mongo.Database, rw http.ResponseWriter, r *http.Request) {
 	token := &models.Token{}
 
 	err := json.NewDecoder(r.Body).Decode(token)
@@ -34,7 +35,7 @@ func LoginUser(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	resp := models.LoginUser(token.Token)
+	resp := models.LoginUser(db, token.Token)
 
 	utils.Respond(rw, resp)
 }

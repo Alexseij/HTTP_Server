@@ -1,13 +1,16 @@
 package main
 
 import (
+	"context"
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
-	"github.com/Alexseij/server/handlers/auth"
-	"github.com/Alexseij/server/handlers/order"
-	"github.com/gorilla/mux"
+	"github.com/Alexseij/server/application"
+	"github.com/joho/godotenv"
 )
 
 var (
@@ -16,25 +19,46 @@ var (
 
 func main() {
 
+	application := &application.App{}
+
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	dbUser := os.Getenv("db_user")
+	dbPassword := os.Getenv("db_password")
+	dbHost := os.Getenv("db_host")
+	dbName := os.Getenv("db_name")
+
+	application.Init(dbUser, dbPassword, dbHost, dbName)
+
 	server := &http.Server{
-		Addr:    "localhost:8000",
-		Handler: buildHandler(),
+		Addr:         "localhost:8000",
+		Handler:      application.Router,
+		WriteTimeout: 15 * time.Second,
+		ReadTimeout:  15 * time.Second,
 	}
-	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-		log.Print(err)
-		os.Exit(-1)
-	}
-}
 
-func buildHandler() http.Handler {
-	router := mux.NewRouter()
+	go func() {
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Print(err)
+			os.Exit(-1)
+		}
+	}()
 
-	router.HandleFunc("/api/user/new", auth.CreateUser).Methods("POST")
-	router.HandleFunc("/api/user/login", auth.LoginUser).Methods("POST")
-	router.HandleFunc("/api/order/make", order.MakeOrder).Methods("POST")
-	router.HandleFunc("/api/order/delete", order.DeleteOrderWithID).Methods("DELETE")
-	router.HandleFunc("/api/order/update", order.UpdateOrder).Methods("PUT")
-	router.HandleFunc("/api/order/get", order.GetOrder).Methods("GET")
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
+	<-c
 
-	return router
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*15)
+	defer func() {
+		application.DB.Client().Disconnect(ctx)
+		cancel()
+	}()
+
+	server.Shutdown(ctx)
+
+	log.Print("server shutdown")
+	os.Exit(0)
 }

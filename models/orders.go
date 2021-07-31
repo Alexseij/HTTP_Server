@@ -25,8 +25,8 @@ type Order struct {
 	TimeUpdate  primitive.DateTime `bson:"time_update,omitempty"`
 }
 
-func (o *Order) MakeOrder() map[string]interface{} {
-	ordersCollection := GetDB().Collection("orders")
+func (o *Order) MakeOrder(db *mongo.Database) map[string]interface{} {
+	ordersCollection := db.Collection("orders")
 	ctx := context.TODO()
 
 	o.TimeCreate = primitive.NewDateTimeFromTime(time.Now())
@@ -47,8 +47,8 @@ func (o *Order) MakeOrder() map[string]interface{} {
 	return resp
 }
 
-func DeleteOrder(order *Order) map[string]interface{} {
-	ordersCollection := GetDB().Collection("orders")
+func DeleteOrder(db *mongo.Database, order *Order) map[string]interface{} {
+	ordersCollection := db.Collection("orders")
 	ctx := context.TODO()
 
 	delResult, err := ordersCollection.DeleteOne(ctx, bson.M{"_id": order.OrderID})
@@ -61,8 +61,8 @@ func DeleteOrder(order *Order) map[string]interface{} {
 	return utils.Message(true, "Order deleted")
 }
 
-func FindOrder(orderID primitive.ObjectID) (o *Order, err error) {
-	ordersCollection := GetDB().Collection("orders")
+func FindOrder(db *mongo.Database, orderID primitive.ObjectID) (o *Order, err error) {
+	ordersCollection := db.Collection("orders")
 	ctx := context.TODO()
 	order := &Order{}
 
@@ -77,8 +77,8 @@ func FindOrder(orderID primitive.ObjectID) (o *Order, err error) {
 	return order, nil
 }
 
-func UpdateOrder(updateOrder *Order) map[string]interface{} {
-	ordersCollection := GetDB().Collection("orders")
+func UpdateOrder(db *mongo.Database, updateOrder *Order) map[string]interface{} {
+	ordersCollection := db.Collection("orders")
 	ctx := context.TODO()
 
 	updateOrder.TimeUpdate = primitive.NewDateTimeFromTime(time.Now())
