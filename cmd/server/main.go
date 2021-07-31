@@ -1,7 +1,7 @@
 package main
 
 import (
-	"flag"
+	"log"
 	"net/http"
 	"os"
 
@@ -14,8 +14,6 @@ var (
 	Version = "1.0.0"
 )
 
-var flagConfig = flag.String("config", "../config/local.yml", "path to cofig file ")
-
 func main() {
 
 	server := &http.Server{
@@ -23,6 +21,7 @@ func main() {
 		Handler: buildHandler(),
 	}
 	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		log.Print(err)
 		os.Exit(-1)
 	}
 }
@@ -35,6 +34,7 @@ func buildHandler() http.Handler {
 	router.HandleFunc("/api/order/make", order.MakeOrder).Methods("POST")
 	router.HandleFunc("/api/order/delete", order.DeleteOrderWithID).Methods("DELETE")
 	router.HandleFunc("/api/order/update", order.UpdateOrder).Methods("PUT")
+	router.HandleFunc("/api/order/get", order.GetOrder).Methods("GET")
 
 	return router
 }
