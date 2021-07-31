@@ -2,6 +2,7 @@ package models
 
 import (
 	"context"
+	"log"
 	"os"
 
 	"github.com/Alexseij/server/utils"
@@ -10,7 +11,7 @@ import (
 	"google.golang.org/api/idtoken"
 )
 
-type TokenType struct {
+type Token struct {
 	Token string `json:"token"`
 }
 
@@ -33,10 +34,12 @@ func validateToken(token string) (*idtoken.Payload, error) {
 
 	tokenValidator, err := idtoken.NewValidator(context.Background())
 	if err != nil {
+		log.Print(err)
 		return nil, err
 	}
 	payload, err := tokenValidator.Validate(context.Background(), token, clientID)
 	if err != nil {
+		log.Print(err)
 		return nil, err
 	}
 	return payload, nil
@@ -46,6 +49,7 @@ func (u *User) Validate() (*idtoken.Payload, map[string]interface{}, bool) {
 
 	payload, err := validateToken(u.Token)
 	if err != nil {
+		log.Print(err)
 		return nil, utils.Message(false, "Incorrect token"), false
 	}
 
@@ -60,9 +64,11 @@ func (u *User) Create() map[string]interface{} {
 	}
 
 	users := GetDB().Collection("users")
+	ctx := context.TODO()
 
 	user, err := GetUser(u.Token)
 	if err != nil {
+		log.Print(err)
 		return utils.Message(false, "Incorrect database query")
 	}
 
@@ -74,7 +80,13 @@ func (u *User) Create() map[string]interface{} {
 	u.Name = payload.Claims["name"].(string)
 	u.Rating = DefaultRating
 
-	users.InsertOne(context.TODO(), u)
+	result, err := users.InsertOne(ctx, u)
+	if err != nil {
+		log.Print(err)
+		return utils.Message(false, "Ivalid request to database")
+	}
+
+	log.Print("User created with id :", result.InsertedID)
 
 	return utils.Message(true, "User created !")
 }
@@ -89,6 +101,7 @@ func GetUser(token string) (*User, error) {
 		if err == mongo.ErrNoDocuments {
 			return nil, nil
 		}
+		log.Print(err)
 		return nil, err
 	}
 
@@ -98,12 +111,15 @@ func GetUser(token string) (*User, error) {
 func LoginUser(token string) map[string]interface{} {
 	user, err := GetUser(token)
 	if err != nil {
+		log.Print(err)
 		return utils.Message(false, "Incorrect database query")
 	}
 
 	if user == nil {
 		return utils.Message(false, "User dosent exist")
 	}
+
+	log.Print("User : ", user.Token, "Logined.")
 
 	return utils.Message(true, "User login into account")
 
