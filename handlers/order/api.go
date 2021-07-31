@@ -91,3 +91,44 @@ func UpdateOrder(rw http.ResponseWriter, r *http.Request) {
 
 	utils.Respond(rw, resp)
 }
+
+func GetOrder(rw http.ResponseWriter, r *http.Request) {
+
+	orderID := &models.OrderID{}
+
+	if err := json.NewDecoder(r.Body).Decode(orderID); err != nil {
+		log.Print(err)
+		utils.Respond(rw, utils.Message(false, "Ivalid rquest"))
+		return
+	}
+
+	primitiveOrderID, err := primitive.ObjectIDFromHex(orderID.ID)
+	if err != nil {
+		log.Print(err)
+		utils.Respond(rw, utils.Message(false, "Fail with creating primitive orderID"))
+		return
+	}
+
+	order, err := models.FindOrder(primitiveOrderID)
+	if err != nil {
+		log.Print(err)
+		utils.Respond(rw, utils.Message(false, "Fail with getting order from db"))
+		return
+	}
+
+	if order == nil {
+		utils.Respond(rw, utils.Message(false, "Order with curren id dosent exits"))
+		return
+	}
+
+	resp := utils.Message(true, "Order was found")
+	resp["id"] = orderID.ID
+	resp["description"] = order.Description
+	resp["name"] = order.Name
+	resp["from"] = order.From
+	resp["destination"] = order.Destination
+	resp["time_create"] = order.TimeCreate
+	resp["time_update"] = order.TimeUpdate
+
+	utils.Respond(rw, resp)
+}
