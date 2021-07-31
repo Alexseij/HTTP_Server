@@ -9,7 +9,7 @@ import (
 )
 
 func CreateUser(rw http.ResponseWriter, r *http.Request) {
-	token := &models.TokenType{}
+	token := &models.Token{}
 
 	err := json.NewDecoder(r.Body).Decode(token)
 	if err != nil {
@@ -26,7 +26,7 @@ func CreateUser(rw http.ResponseWriter, r *http.Request) {
 }
 
 func LoginUser(rw http.ResponseWriter, r *http.Request) {
-	token := &models.TokenType{}
+	token := &models.Token{}
 
 	err := json.NewDecoder(r.Body).Decode(token)
 	if err != nil {
