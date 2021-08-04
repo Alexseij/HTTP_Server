@@ -12,14 +12,14 @@ import (
 )
 
 type Token struct {
-	Token string `json:"token"`
+	Token string `json:"token" bson:"token"`
 }
 
 type User struct {
-	Token  string `json:"token"`
-	Rating int    `json:"rating"`
-	Name   string `json:"name"`
-	Email  string `json:"email"`
+	Token  string `json:"token" bson:"token"`
+	Rating int    `json:"rating" bson:"rating"`
+	Name   string `json:"name" bson:"name"`
+	Email  string `json:"email" bson:"email"`
 }
 
 const (
@@ -122,5 +122,19 @@ func LoginUser(db *mongo.Database, token string) map[string]interface{} {
 	log.Print("User : ", user.Token, "Logined.")
 
 	return utils.Message(true, "User login into account")
+
+}
+
+func (u *User) UpdateRating(db *mongo.Database, currentRating int) map[string]interface{} {
+	usersCollection := db.Collection("users")
+	ctx := context.TODO()
+
+	_, err := usersCollection.UpdateOne(ctx, bson.M{"token": u.Token}, bson.M{"$set": bson.M{"rating": currentRating}})
+	if err != nil {
+		log.Print("file accounts.go , UpdateRating() : ", err)
+		return utils.Message(false, "Incorrect update query to database")
+	}
+
+	return utils.Message(true, "Rating updated")
 
 }

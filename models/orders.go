@@ -47,11 +47,11 @@ func (o *Order) MakeOrder(db *mongo.Database) map[string]interface{} {
 	return resp
 }
 
-func DeleteOrder(db *mongo.Database, order *Order) map[string]interface{} {
+func (o *Order) DeleteOrder(db *mongo.Database) map[string]interface{} {
 	ordersCollection := db.Collection("orders")
 	ctx := context.TODO()
 
-	delResult, err := ordersCollection.DeleteOne(ctx, bson.M{"_id": order.OrderID})
+	delResult, err := ordersCollection.DeleteOne(ctx, bson.M{"_id": o.OrderID})
 	if err != nil {
 		log.Print("file : orders.go , DeleteOne() : ", err)
 		return utils.Message(false, "Invalid operation to delete order")
@@ -61,7 +61,7 @@ func DeleteOrder(db *mongo.Database, order *Order) map[string]interface{} {
 	return utils.Message(true, "Order deleted")
 }
 
-func FindOrder(db *mongo.Database, orderID primitive.ObjectID) (o *Order, err error) {
+func GetOrder(db *mongo.Database, orderID primitive.ObjectID) (o *Order, err error) {
 	ordersCollection := db.Collection("orders")
 	ctx := context.TODO()
 
@@ -78,13 +78,13 @@ func FindOrder(db *mongo.Database, orderID primitive.ObjectID) (o *Order, err er
 	return order, nil
 }
 
-func UpdateOrder(db *mongo.Database, updateOrder *Order) map[string]interface{} {
+func (o *Order) UpdateOrder(db *mongo.Database, updatedOrder *Order) map[string]interface{} {
 	ordersCollection := db.Collection("orders")
 	ctx := context.TODO()
 
-	updateOrder.TimeUpdate = primitive.NewDateTimeFromTime(time.Now())
+	o.TimeUpdate = primitive.NewDateTimeFromTime(time.Now())
 
-	_, err := ordersCollection.UpdateOne(ctx, bson.M{"_id": updateOrder.OrderID}, bson.M{"$set": updateOrder})
+	_, err := ordersCollection.UpdateOne(ctx, bson.M{"_id": o.OrderID}, bson.M{"$set": updatedOrder})
 	if err != nil {
 		log.Print("file : orders.go , UpdateOne() : ", err)
 		return utils.Message(false, "Ivalid request to database")

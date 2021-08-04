@@ -43,7 +43,7 @@ func deleteOrderAfterDelay(db *mongo.Database, delay time.Duration, orderID prim
 }
 
 func deleteOrder(db *mongo.Database, rw http.ResponseWriter, orderID primitive.ObjectID) {
-	order, err := models.FindOrder(db, orderID)
+	order, err := models.GetOrder(db, orderID)
 	if err != nil {
 		log.Print(err)
 		utils.Respond(rw, utils.Message(false, "Invalid delete from database"))
@@ -55,7 +55,8 @@ func deleteOrder(db *mongo.Database, rw http.ResponseWriter, orderID primitive.O
 		return
 	}
 
-	resp := models.DeleteOrder(db, order)
+	resp := order.DeleteOrder(db)
+
 	utils.Respond(rw, resp)
 
 }
@@ -88,7 +89,13 @@ func UpdateOrder(db *mongo.Database, rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	resp := models.UpdateOrder(db, updateOrder)
+	currentOrder, err := models.GetOrder(db, updateOrder.OrderID)
+	if err != nil {
+		log.Print("file : order/api.go , UpdateOrder() : ", err)
+		utils.Respond(rw, utils.Message(false, "Invalid getting order"))
+	}
+
+	resp := currentOrder.UpdateOrder(db, updateOrder)
 
 	utils.Respond(rw, resp)
 }
@@ -110,7 +117,7 @@ func GetOrder(db *mongo.Database, rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	order, err := models.FindOrder(db, primitiveOrderID)
+	order, err := models.GetOrder(db, primitiveOrderID)
 	if err != nil {
 		log.Print(err)
 		utils.Respond(rw, utils.Message(false, "Fail with getting order from db"))
