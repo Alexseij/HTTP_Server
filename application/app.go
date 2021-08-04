@@ -62,6 +62,7 @@ func (a *App) setHandlers() {
 	a.Delete("/api/order/delete", a.handleReq(order.DeleteOrderWithID))
 	a.Put("/api/order/update", a.handleReq(order.UpdateOrder))
 	a.Get("/api/order/get", a.handleReq(order.GetOrder))
+	a.Get("/api/user/get", a.handleReq(auth.GetUser))
 }
 
 func (a *App) Get(path string, handler func(http.ResponseWriter, *http.Request)) {

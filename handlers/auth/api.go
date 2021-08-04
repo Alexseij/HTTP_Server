@@ -39,3 +39,38 @@ func LoginUser(db *mongo.Database, rw http.ResponseWriter, r *http.Request) {
 
 	utils.Respond(rw, resp)
 }
+
+func GetUser(db *mongo.Database, rw http.ResponseWriter, r *http.Request) {
+	token := &models.Token{}
+
+	err := json.NewDecoder(r.Body).Decode(token)
+	if err != nil {
+		resp := utils.Message(false, "Ivalid request")
+		resp["is_err"] = true
+		utils.Respond(rw, resp)
+		return
+	}
+
+	user, err := models.GetUser(db, token.Token)
+	if err != nil {
+		resp := utils.Message(false, "Ivalid request to database")
+		resp["is_err"] = true
+		utils.Respond(rw, resp)
+		return
+	}
+
+	if user == nil {
+		resp := utils.Message(false, "Have no current user with that token")
+		resp["is_err"] = false
+		utils.Respond(rw, resp)
+		return
+	}
+
+	resp := utils.Message(true, "User was found")
+	resp["email"] = user.Email
+	resp["name"] = user.Name
+	resp["rating"] = user.Rating
+	resp["token"] = user.Token
+
+	utils.Respond(rw, resp)
+}
