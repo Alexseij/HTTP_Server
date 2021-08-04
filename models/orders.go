@@ -27,7 +27,9 @@ type Order struct {
 
 func (o *Order) MakeOrder(db *mongo.Database) map[string]interface{} {
 	ordersCollection := db.Collection("orders")
-	ctx := context.TODO()
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	defer cancel()
 
 	o.TimeCreate = primitive.NewDateTimeFromTime(time.Now())
 	o.TimeUpdate = primitive.NewDateTimeFromTime(time.Now())
@@ -49,7 +51,9 @@ func (o *Order) MakeOrder(db *mongo.Database) map[string]interface{} {
 
 func (o *Order) DeleteOrder(db *mongo.Database) map[string]interface{} {
 	ordersCollection := db.Collection("orders")
-	ctx := context.TODO()
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	defer cancel()
 
 	delResult, err := ordersCollection.DeleteOne(ctx, bson.M{"_id": o.OrderID})
 	if err != nil {
@@ -63,7 +67,9 @@ func (o *Order) DeleteOrder(db *mongo.Database) map[string]interface{} {
 
 func GetOrder(db *mongo.Database, orderID primitive.ObjectID) (o *Order, err error) {
 	ordersCollection := db.Collection("orders")
-	ctx := context.TODO()
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	defer cancel()
 
 	order := &Order{}
 
@@ -80,7 +86,9 @@ func GetOrder(db *mongo.Database, orderID primitive.ObjectID) (o *Order, err err
 
 func (o *Order) UpdateOrder(db *mongo.Database, updatedOrder *Order) map[string]interface{} {
 	ordersCollection := db.Collection("orders")
-	ctx := context.TODO()
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	defer cancel()
 
 	o.TimeUpdate = primitive.NewDateTimeFromTime(time.Now())
 

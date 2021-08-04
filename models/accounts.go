@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"os"
+	"time"
 
 	"github.com/Alexseij/server/utils"
 	"go.mongodb.org/mongo-driver/bson"
@@ -62,9 +63,10 @@ func (u *User) Create(db *mongo.Database) map[string]interface{} {
 	if !ok {
 		return resp
 	}
-
 	users := db.Collection("users")
-	ctx := context.TODO()
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	defer cancel()
 
 	user, err := GetUser(db, u.Token)
 	if err != nil {
@@ -93,7 +95,9 @@ func (u *User) Create(db *mongo.Database) map[string]interface{} {
 
 func GetUser(db *mongo.Database, token string) (*User, error) {
 	usersCollection := db.Collection("users")
-	ctx := context.TODO()
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	defer cancel()
 
 	user := &User{}
 
@@ -127,7 +131,9 @@ func LoginUser(db *mongo.Database, token string) map[string]interface{} {
 
 func (u *User) UpdateRating(db *mongo.Database, currentRating int) map[string]interface{} {
 	usersCollection := db.Collection("users")
-	ctx := context.TODO()
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	defer cancel()
 
 	_, err := usersCollection.UpdateOne(ctx, bson.M{"token": u.Token}, bson.M{"$set": bson.M{"rating": currentRating}})
 	if err != nil {
