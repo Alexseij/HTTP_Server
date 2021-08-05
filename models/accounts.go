@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/Alexseij/server/utils"
+	"github.com/joho/godotenv"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"google.golang.org/api/idtoken"
@@ -24,12 +25,19 @@ const (
 	DefaultRating = 5
 )
 
-var (
+var clientID string
+
+func init() {
+	if err := godotenv.Load(); err != nil {
+		log.Fatal(err)
+	}
+
 	clientID = os.Getenv("client_id")
-)
+}
 
 func validateToken(token string) (*idtoken.Payload, error) {
 
+	log.Print(clientID)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 
