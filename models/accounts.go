@@ -3,6 +3,7 @@ package models
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"os"
 	"time"
@@ -31,86 +32,25 @@ func init() {
 	if err := godotenv.Load(); err != nil {
 		log.Fatal(err)
 	}
-
 	clientID = os.Getenv("client_id")
 }
 
 func validateToken(token string) (*idtoken.Payload, error) {
-
-	log.Print(clientID)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 
-	tokenValidator, err := idtoken.NewValidator(ctx)
+	payload, err := idtoken.Validate(ctx, token, clientID)
 	if err != nil {
-		log.Print(err)
-		return nil, err
-	}
-	payload, err := tokenValidator.Validate(ctx, token, clientID)
-	if err != nil {
-		log.Print(err)
 		return nil, err
 	}
 	return payload, nil
 }
 
-func (u *User) Validate() (*idtoken.Payload, map[string]interface{}, bool) {
-
-	payload, err := validateToken(u.Token)
-	if err != nil {
-		log.Print(err)
-		return nil, utils.Message(false, "Incorrect token"), false
-	}
-
-	return payload, utils.Message(true, "Accepted"), true
-
-}
-
-func (u *User) Create(db *mongo.Database) map[string]interface{} {
-	payload, resp, ok := u.Validate()
-	if !ok {
-		return resp
-	}
-	if ok := utils.CheckDomain(payload.Claims["email"].(string)); !ok {
-		resp := utils.Message(false, "Current email incorrect")
-		return resp
-	}
-
-	users := db.Collection("users")
-
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+func getUser(db *mongo.Database, token string) (*User, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
 	defer cancel()
 
-	user, err := GetUser(db, u.Token)
-	if err != nil {
-		log.Print(err)
-		return utils.Message(false, "Incorrect database query")
-	}
-
-	if user != nil {
-		return utils.Message(false, "User already exist")
-	}
-
-	u.Email = payload.Claims["email"].(string)
-	u.Name = payload.Claims["name"].(string)
-	u.Rating = DefaultRating
-
-	result, err := users.InsertOne(ctx, u)
-	if err != nil {
-		log.Print(err)
-		return utils.Message(false, "Ivalid request to database")
-	}
-
-	log.Print("User created with id :", result.InsertedID)
-
-	return utils.Message(true, "User created !")
-}
-
-func GetUser(db *mongo.Database, token string) (*User, error) {
 	usersCollection := db.Collection("users")
-
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
-	defer cancel()
 
 	user := &User{}
 
@@ -118,46 +58,73 @@ func GetUser(db *mongo.Database, token string) (*User, error) {
 		if err == mongo.ErrNoDocuments {
 			return nil, nil
 		}
-		log.Print(err)
 		return nil, err
 	}
 
 	return user, nil
 }
 
+func (u *User) createUser(db *mongo.Database) error {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	defer cancel()
+
+	usersCollection := db.Collection("users")
+
+	if ok := utils.CheckDomain(u.Email); !ok {
+		return fmt.Errorf("Current domain cant using in that system")
+	}
+
+	result, err := usersCollection.InsertOne(ctx, u)
+	if err != nil {
+		return err
+	}
+	log.Print("User created with id : ", result.InsertedID)
+
+	return nil
+}
+
 func LoginUser(db *mongo.Database, token string) map[string]interface{} {
-	user, err := GetUser(db, token)
+	payload, err := validateToken(token)
 	if err != nil {
 		log.Print(err)
-		return utils.Message(false, "Incorrect database query")
+		resp := utils.Message(false, "Error with validate token")
+		resp["user"] = nil
+		return resp
+	}
+
+	user, err := getUser(db, token)
+	if err != nil {
+		log.Print(err)
+		resp := utils.Message(false, "Error with getting user from collection")
+		resp["user"] = nil
+		return resp
 	}
 
 	if user == nil {
-		user := &User{
-			Token: token,
-		}
+		user = &User{}
+		user.Email = payload.Claims["email"].(string)
+		user.Name = payload.Claims["name"].(string)
+		user.Rating = DefaultRating
+		user.Token = token
 
-		resp := user.Create(db)
-
-		if !resp["status"].(bool) {
+		if err := user.createUser(db); err != nil {
+			log.Print(err)
+			resp := utils.Message(false, "Error with create user")
+			resp["user"] = nil
 			return resp
 		}
 	}
-
 	userJSON, err := json.Marshal(user)
 	if err != nil {
-		return utils.Message(false, "Marshaling error")
+		log.Print(err)
+		resp := utils.Message(false, "Error with converting struct into JSON")
+		resp["user"] = nil
+		return resp
 	}
-
-	resp := utils.Message(true, "User login into account")
+	resp := utils.Message(true, "User sing in")
 	resp["user"] = userJSON
-
-	log.Print("User : ", user.Token, "Logined.")
-
 	return resp
-
 }
-
 func (u *User) UpdateRating(db *mongo.Database, currentRating int) map[string]interface{} {
 	usersCollection := db.Collection("users")
 
