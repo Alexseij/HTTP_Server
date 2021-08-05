@@ -7,20 +7,13 @@ import (
 )
 
 type Config struct {
-	DB     *DBConfig
-	Server *SeverConfig
-}
-
-type SeverConfig struct {
-	Port string `yaml:"port"`
-	Host string `yaml:"host"`
-}
-
-type DBConfig struct {
 	DBUser     string `yaml:"db_user"`
 	DBPassword string `yaml:"db_password"`
 	DBName     string `yaml:"db_name"`
 	DBHost     string `yaml:"db_host"`
+
+	Port string `yaml:"port"`
+	Host string `yaml:"host"`
 }
 
 func LoadCfg(path string) (*Config, error) {

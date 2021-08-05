@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"flag"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -10,31 +12,31 @@ import (
 	"time"
 
 	"github.com/Alexseij/server/application"
-	"github.com/joho/godotenv"
+	"github.com/Alexseij/server/config"
 )
 
 var (
 	Version = "1.0.0"
 )
 
+var flagCfg = flag.String("config", "../../config/local.yml", "Config for starting server")
+
 func main() {
+
+	flag.Parse()
 
 	application := &application.App{}
 
-	err := godotenv.Load()
+	cfg, err := config.LoadCfg(*flagCfg)
 	if err != nil {
-		log.Fatal("file main.go , godotenv.Load() : ", err)
+		log.Fatal("error to connect with cfg : ", err)
 	}
 
-	dbUser := os.Getenv("db_user")
-	dbPassword := os.Getenv("db_password")
-	dbHost := os.Getenv("db_host")
-	dbName := os.Getenv("db_name")
-
-	application.Init(dbUser, dbPassword, dbHost, dbName)
+	application.Init(cfg.DBUser, cfg.DBPassword, cfg.DBHost, cfg.DBName)
+	addr := fmt.Sprintf("%s:%s", cfg.Host, cfg.Port)
 
 	server := &http.Server{
-		Addr:         "localhost:8000",
+		Addr:         addr,
 		Handler:      application.Router,
 		WriteTimeout: 15 * time.Second,
 		ReadTimeout:  15 * time.Second,
@@ -60,7 +62,9 @@ func main() {
 		cancel()
 	}()
 
-	server.Shutdown(ctx)
+	if err := server.Shutdown(ctx); err != nil {
+		log.Fatal(err)
+	}
 
 	log.Print("server shutdown")
 	os.Exit(0)
