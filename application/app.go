@@ -56,13 +56,13 @@ func (a *App) Init(dbUser, dbPassword, dbHost, dbName string) {
 }
 
 func (a *App) setHandlers() {
-	a.Post("/api/user/new", a.handleReq(auth.CreateUser))
-	a.Post("/api/user/login", a.handleReq(auth.LoginUser))
 	a.Post("/api/order/make", a.handleReq(order.MakeOrder))
 	a.Delete("/api/order/delete", a.handleReq(order.DeleteOrderWithID))
 	a.Put("/api/order/update", a.handleReq(order.UpdateOrder))
-	a.Get("/api/order/get", a.handleReq(order.GetOrder))
-	a.Get("/api/user/get", a.handleReq(auth.GetUser))
+	a.Get("/api/user/login/{token}", a.handleReq(auth.LoginUser))
+	a.Get("/api/user/new/{token}", a.handleReq(auth.CreateUser))
+	a.Get("/api/order/{orderID}", a.handleReq(order.GetOrder))
+	a.Get("/api/user/{token}", a.handleReq(auth.GetUser))
 }
 
 func (a *App) Get(path string, handler func(http.ResponseWriter, *http.Request)) {

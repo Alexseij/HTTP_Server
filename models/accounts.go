@@ -2,6 +2,7 @@ package models
 
 import (
 	"context"
+	"encoding/json"
 	"log"
 	"os"
 	"time"
@@ -11,10 +12,6 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"google.golang.org/api/idtoken"
 )
-
-type Token struct {
-	Token string `json:"token" bson:"token"`
-}
 
 type User struct {
 	Token  string `json:"token" bson:"token"`
@@ -33,12 +30,15 @@ var (
 
 func validateToken(token string) (*idtoken.Payload, error) {
 
-	tokenValidator, err := idtoken.NewValidator(context.Background())
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	defer cancel()
+
+	tokenValidator, err := idtoken.NewValidator(ctx)
 	if err != nil {
 		log.Print(err)
 		return nil, err
 	}
-	payload, err := tokenValidator.Validate(context.Background(), token, clientID)
+	payload, err := tokenValidator.Validate(ctx, token, clientID)
 	if err != nil {
 		log.Print(err)
 		return nil, err
@@ -63,6 +63,11 @@ func (u *User) Create(db *mongo.Database) map[string]interface{} {
 	if !ok {
 		return resp
 	}
+	if ok := utils.CheckDomain(payload.Claims["email"].(string)); !ok {
+		resp := utils.Message(false, "Current email incorrect")
+		return resp
+	}
+
 	users := db.Collection("users")
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
@@ -120,12 +125,28 @@ func LoginUser(db *mongo.Database, token string) map[string]interface{} {
 	}
 
 	if user == nil {
-		return utils.Message(false, "User dosent exist")
+		user := &User{
+			Token: token,
+		}
+
+		resp := user.Create(db)
+
+		if !resp["status"].(bool) {
+			return resp
+		}
 	}
+
+	userJSON, err := json.Marshal(user)
+	if err != nil {
+		return utils.Message(false, "Marshaling error")
+	}
+
+	resp := utils.Message(true, "User login into account")
+	resp["user"] = userJSON
 
 	log.Print("User : ", user.Token, "Logined.")
 
-	return utils.Message(true, "User login into account")
+	return resp
 
 }
 

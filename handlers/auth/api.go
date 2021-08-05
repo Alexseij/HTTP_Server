@@ -1,25 +1,21 @@
 package auth
 
 import (
-	"encoding/json"
+	"log"
 	"net/http"
 
 	"github.com/Alexseij/server/models"
 	"github.com/Alexseij/server/utils"
+	"github.com/gorilla/mux"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
 func CreateUser(db *mongo.Database, rw http.ResponseWriter, r *http.Request) {
-	token := &models.Token{}
 
-	err := json.NewDecoder(r.Body).Decode(token)
-	if err != nil {
-		utils.Respond(rw, utils.Message(false, "Ivalid request"))
-		return
-	}
+	vars := mux.Vars(r)
 
 	user := &models.User{
-		Token: token.Token,
+		Token: vars["token"],
 	}
 
 	resp := user.Create(db)
@@ -27,31 +23,20 @@ func CreateUser(db *mongo.Database, rw http.ResponseWriter, r *http.Request) {
 }
 
 func LoginUser(db *mongo.Database, rw http.ResponseWriter, r *http.Request) {
-	token := &models.Token{}
 
-	err := json.NewDecoder(r.Body).Decode(token)
-	if err != nil {
-		utils.Respond(rw, utils.Message(false, "Invalid request"))
-		return
-	}
+	vars := mux.Vars(r)
 
-	resp := models.LoginUser(db, token.Token)
+	resp := models.LoginUser(db, vars["token"])
 
 	utils.Respond(rw, resp)
 }
 
 func GetUser(db *mongo.Database, rw http.ResponseWriter, r *http.Request) {
-	token := &models.Token{}
+	log.Print("Icoming request : ", r.Body)
 
-	err := json.NewDecoder(r.Body).Decode(token)
-	if err != nil {
-		resp := utils.Message(false, "Ivalid request")
-		resp["is_err"] = true
-		utils.Respond(rw, resp)
-		return
-	}
+	vars := mux.Vars(r)
 
-	user, err := models.GetUser(db, token.Token)
+	user, err := models.GetUser(db, vars["token"])
 	if err != nil {
 		resp := utils.Message(false, "Ivalid request to database")
 		resp["is_err"] = true
