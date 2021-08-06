@@ -2,8 +2,6 @@ package models
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
 	"log"
 	"os"
 	"time"
@@ -70,10 +68,6 @@ func (u *User) createUser(db *mongo.Database) error {
 
 	usersCollection := db.Collection("users")
 
-	if ok := utils.CheckDomain(u.Email); !ok {
-		return fmt.Errorf("Current domain cant using in that system")
-	}
-
 	result, err := usersCollection.InsertOne(ctx, u)
 	if err != nil {
 		return err
@@ -92,6 +86,12 @@ func LoginUser(db *mongo.Database, token string) map[string]interface{} {
 		return resp
 	}
 
+	if ok := utils.CheckDomain(payload.Claims["email"].(string)); !ok {
+		resp := utils.Message(false, "Current email domain , can't use in this system")
+		resp["user"] = nil
+		return resp
+	}
+
 	user, err := getUser(db, token)
 	if err != nil {
 		log.Print(err)
@@ -99,8 +99,8 @@ func LoginUser(db *mongo.Database, token string) map[string]interface{} {
 		resp["user"] = nil
 		return resp
 	}
-
 	if user == nil {
+		log.Print("in condition user == nil , user : ", user)
 		user = &User{}
 		user.Email = payload.Claims["email"].(string)
 		user.Name = payload.Claims["name"].(string)
@@ -114,15 +114,8 @@ func LoginUser(db *mongo.Database, token string) map[string]interface{} {
 			return resp
 		}
 	}
-	userJSON, err := json.Marshal(user)
-	if err != nil {
-		log.Print(err)
-		resp := utils.Message(false, "Error with converting struct into JSON")
-		resp["user"] = nil
-		return resp
-	}
 	resp := utils.Message(true, "User sing in")
-	resp["user"] = userJSON
+	resp["user"] = user
 	return resp
 }
 func (u *User) UpdateRating(db *mongo.Database, currentRating int) map[string]interface{} {
