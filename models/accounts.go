@@ -4,10 +4,11 @@ import (
 	"context"
 	"log"
 	"os"
+	"strconv"
 	"time"
 
+	"cloud.google.com/go/pubsub"
 	"github.com/Alexseij/server/utils"
-	"github.com/joho/godotenv"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"google.golang.org/api/idtoken"
@@ -24,27 +25,18 @@ const (
 	DefaultRating = 5
 )
 
-var clientID string
-
-func init() {
-	if err := godotenv.Load(); err != nil {
-		log.Fatal(err)
-	}
-	clientID = os.Getenv("client_id")
-}
-
 func validateToken(token string) (*idtoken.Payload, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 
-	payload, err := idtoken.Validate(ctx, token, clientID)
+	payload, err := idtoken.Validate(ctx, token, os.Getenv("client_id"))
 	if err != nil {
 		return nil, err
 	}
 	return payload, nil
 }
 
-func getUser(db *mongo.Database, token string) (*User, error) {
+func GetUser(db *mongo.Database, email string) (*User, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
 	defer cancel()
 
@@ -52,7 +44,7 @@ func getUser(db *mongo.Database, token string) (*User, error) {
 
 	user := &User{}
 
-	if err := usersCollection.FindOne(ctx, bson.M{"token": token}).Decode(user); err != nil {
+	if err := usersCollection.FindOne(ctx, bson.M{"email": email}).Decode(user); err != nil {
 		if err == mongo.ErrNoDocuments {
 			return nil, nil
 		}
@@ -92,7 +84,7 @@ func LoginUser(db *mongo.Database, token string) map[string]interface{} {
 		return resp
 	}
 
-	user, err := getUser(db, token)
+	user, err := GetUser(db, payload.Claims["email"].(string))
 	if err != nil {
 		log.Print(err)
 		resp := utils.Message(false, "Error with getting user from collection")
@@ -118,7 +110,33 @@ func LoginUser(db *mongo.Database, token string) map[string]interface{} {
 	resp["user"] = user
 	return resp
 }
-func (u *User) UpdateRating(db *mongo.Database, currentRating int) map[string]interface{} {
+
+func publishToRatingTopic(topicName, projectID, message string) error {
+	ctx := context.Background()
+
+	client, err := pubsub.NewClient(ctx, projectID)
+	if err != nil {
+		return err
+	}
+	defer client.Close()
+
+	topic := client.Topic(topicName)
+
+	result := topic.Publish(ctx, &pubsub.Message{
+		Data: []byte(message),
+	})
+
+	id, err := result.Get(ctx)
+
+	if err != nil {
+		return err
+	}
+
+	log.Print("Published msg with ID : ", id)
+	return nil
+}
+
+func (u *User) UpdateRating(db *mongo.Database, currentRating int, topicName, projectID string) map[string]interface{} {
 	usersCollection := db.Collection("users")
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
@@ -130,6 +148,11 @@ func (u *User) UpdateRating(db *mongo.Database, currentRating int) map[string]in
 		return utils.Message(false, "Incorrect update query to database")
 	}
 
-	return utils.Message(true, "Rating updated")
+	if err = publishToRatingTopic(topicName, projectID, strconv.Itoa(currentRating)); err != nil {
+		log.Print(err)
+		return utils.Message(false, "Cant send message to pub/sub service")
+	}
+
+	return utils.Message(true, "Successful update")
 
 }

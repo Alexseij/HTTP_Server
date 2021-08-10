@@ -8,6 +8,7 @@ import (
 
 	"github.com/Alexseij/server/models"
 	"github.com/Alexseij/server/utils"
+	"github.com/gorilla/mux"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 )
@@ -24,7 +25,7 @@ func MakeOrder(db *mongo.Database, rw http.ResponseWriter, r *http.Request) {
 	utils.Respond(rw, resp)
 
 	if resp["status"].(bool) {
-		go deleteOrderAfterDelay(db, time.Second*30, resp["id"].(primitive.ObjectID), rw)
+		go deleteOrderAfterDelay(db, time.Minute*2, resp["id"].(primitive.ObjectID), rw)
 	}
 
 }
@@ -62,15 +63,10 @@ func deleteOrder(db *mongo.Database, rw http.ResponseWriter, orderID primitive.O
 }
 
 func DeleteOrderWithID(db *mongo.Database, rw http.ResponseWriter, r *http.Request) {
-	orderID := &models.OrderID{}
 
-	if err := json.NewDecoder(r.Body).Decode(orderID); err != nil {
-		log.Print(err)
-		utils.Respond(rw, utils.Message(false, "Invalid request"))
-		return
-	}
+	vars := mux.Vars(r)
 
-	primitiveOrderID, err := primitive.ObjectIDFromHex(orderID.ID)
+	primitiveOrderID, err := primitive.ObjectIDFromHex(vars["orderID"])
 	if err != nil {
 		log.Print(err)
 		utils.Respond(rw, utils.Message(false, "Invalid request"))
@@ -100,17 +96,39 @@ func UpdateOrder(db *mongo.Database, rw http.ResponseWriter, r *http.Request) {
 	utils.Respond(rw, resp)
 }
 
-func GetOrder(db *mongo.Database, rw http.ResponseWriter, r *http.Request) {
-
-	orderID := &models.OrderID{}
-
-	if err := json.NewDecoder(r.Body).Decode(orderID); err != nil {
-		log.Print(err)
-		utils.Respond(rw, utils.Message(false, "Ivalid rquest"))
+func GetOrders(db *mongo.Database, rw http.ResponseWriter, r *http.Request) {
+	orders, err := models.GetOrders(db)
+	if err != nil {
+		log.Print("file : orders/api.go , GetOrders() : ", err)
+		utils.Respond(rw, utils.Message(false, "Invalid request"))
 		return
 	}
 
-	primitiveOrderID, err := primitive.ObjectIDFromHex(orderID.ID)
+	resp := utils.Message(true, "Success")
+	resp["orders"] = orders
+	utils.Respond(rw, resp)
+}
+
+func GetOrdersForCurrentUser(db *mongo.Database, rw http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+
+	orders, err := models.GetOrdersForCurrentUser(db, vars["email"])
+	if err != nil {
+		log.Print("file : orders/api.go , GetOrdersForCurrentUser() : ", err)
+		utils.Respond(rw, utils.Message(false, "Invalid request"))
+		return
+	}
+
+	resp := utils.Message(true, "Success")
+	resp["orders"] = orders
+	utils.Respond(rw, resp)
+}
+
+func GetOrder(db *mongo.Database, rw http.ResponseWriter, r *http.Request) {
+
+	vars := mux.Vars(r)
+
+	primitiveOrderID, err := primitive.ObjectIDFromHex(vars["orderID"])
 	if err != nil {
 		log.Print(err)
 		utils.Respond(rw, utils.Message(false, "Fail with creating primitive orderID"))
@@ -130,7 +148,7 @@ func GetOrder(db *mongo.Database, rw http.ResponseWriter, r *http.Request) {
 	}
 
 	resp := utils.Message(true, "Order was found")
-	resp["id"] = orderID.ID
+	resp["id"] = vars["orderID"]
 	resp["description"] = order.Description
 	resp["name"] = order.Name
 	resp["from"] = order.From

@@ -9,6 +9,7 @@ import (
 
 	"github.com/Alexseij/server/handlers/auth"
 	"github.com/Alexseij/server/handlers/order"
+	"github.com/Alexseij/server/handlers/users"
 	"github.com/gorilla/mux"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -57,10 +58,13 @@ func (a *App) Init(dbUser, dbPassword, dbHost, dbName string) {
 
 func (a *App) setHandlers() {
 	a.Post("/api/order/make", a.handleReq(order.MakeOrder))
-	a.Delete("/api/order/delete", a.handleReq(order.DeleteOrderWithID))
+	a.Delete("/api/order/delete/{orderID}", a.handleReq(order.DeleteOrderWithID))
 	a.Put("/api/order/update", a.handleReq(order.UpdateOrder))
 	a.Get("/api/user/login/{token}", a.handleReq(auth.LoginUser))
 	a.Get("/api/order/{orderID}", a.handleReq(order.GetOrder))
+	a.Get("/api/AllOrders", a.handleReq(order.GetOrders))
+	a.Get("/api/GetOrdersForCurrentUser/{email}", a.handleReq(order.DeleteOrderWithID))
+	a.Put("/api/user/{email}/rating/{rating}", a.handleReq(users.UpdateRating))
 }
 
 func (a *App) Get(path string, handler func(http.ResponseWriter, *http.Request)) {

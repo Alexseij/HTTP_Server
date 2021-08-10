@@ -11,10 +11,6 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
-type OrderID struct {
-	ID string `json:"id" bson:"_id"`
-}
-
 type Order struct {
 	OrderID     primitive.ObjectID `json:"id,omitempty" bson:"_id"`
 	Description string             `json:"description" bson:"description"`
@@ -82,6 +78,46 @@ func GetOrder(db *mongo.Database, orderID primitive.ObjectID) (o *Order, err err
 		return nil, err
 	}
 	return order, nil
+}
+
+func GetOrders(db *mongo.Database) ([]*Order, error) {
+	ordersCollection := db.Collection("orders")
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	defer cancel()
+
+	var orders []*Order
+
+	cursor, err := ordersCollection.Find(ctx, bson.M{})
+	if err != nil {
+		return nil, err
+	}
+
+	if err := cursor.All(ctx, &orders); err != nil {
+		return nil, err
+	}
+
+	return orders, nil
+}
+
+func GetOrdersForCurrentUser(db *mongo.Database, email string) ([]*Order, error) {
+	ordersCollection := db.Collection("orders")
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	defer cancel()
+
+	var orders []*Order
+
+	cursor, err := ordersCollection.Find(ctx, bson.M{"from": email})
+	if err != nil {
+		return nil, err
+	}
+
+	if err := cursor.All(ctx, &orders); err != nil {
+		return nil, err
+	}
+
+	return orders, nil
 }
 
 func (o *Order) UpdateOrder(db *mongo.Database, updatedOrder *Order) map[string]interface{} {

@@ -13,6 +13,7 @@ import (
 
 	"github.com/Alexseij/server/application"
 	"github.com/Alexseij/server/config"
+	"github.com/joho/godotenv"
 )
 
 var (
@@ -30,6 +31,10 @@ func main() {
 	cfg, err := config.LoadCfg(*flagCfg)
 	if err != nil {
 		log.Fatal("error to connect with cfg : ", err)
+	}
+
+	if err = godotenv.Load(); err != nil {
+		log.Fatal("error with loading .env file : ", err)
 	}
 
 	application.Init(cfg.DBUser, cfg.DBPassword, cfg.DBHost, cfg.DBName)
