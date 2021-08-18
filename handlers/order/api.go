@@ -43,15 +43,14 @@ func deleteOrder(db *mongo.Database, rw http.ResponseWriter, orderID primitive.O
 		utils.Respond(rw, utils.Message(false, "Invalid delete from database"))
 		return
 	}
-	if order.Status {
-		utils.Respond(rw, utils.Message(false, "Cant delete order"))
-		return
-	}
 	if order == nil {
 		utils.Respond(rw, utils.Message(false, "Order alreay deleted"))
 		return
 	}
-
+	if order.Status {
+		utils.Respond(rw, utils.Message(false, "Cant delete order"))
+		return
+	}
 	resp := order.DeleteOrder(db)
 
 	utils.Respond(rw, resp)
