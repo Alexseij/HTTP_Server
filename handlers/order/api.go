@@ -32,16 +32,8 @@ func MakeOrder(db *mongo.Database, rw http.ResponseWriter, r *http.Request) {
 }
 
 func deleteOrderAfterDelay(db *mongo.Database, delay time.Duration, orderID primitive.ObjectID, rw http.ResponseWriter) {
-	done := make(chan struct{})
-	go func() {
-		time.Sleep(delay)
-		done <- struct{}{}
-	}()
-
-	select {
-	case <-done:
-		deleteOrder(db, rw, orderID)
-	}
+	time.Sleep(delay)
+	deleteOrder(db, rw, orderID)
 }
 
 func deleteOrder(db *mongo.Database, rw http.ResponseWriter, orderID primitive.ObjectID) {
@@ -51,7 +43,10 @@ func deleteOrder(db *mongo.Database, rw http.ResponseWriter, orderID primitive.O
 		utils.Respond(rw, utils.Message(false, "Invalid delete from database"))
 		return
 	}
-
+	if order.Status {
+		utils.Respond(rw, utils.Message(false, "Cant delete order"))
+		return
+	}
 	if order == nil {
 		utils.Respond(rw, utils.Message(false, "Order alreay deleted"))
 		return
@@ -60,7 +55,6 @@ func deleteOrder(db *mongo.Database, rw http.ResponseWriter, orderID primitive.O
 	resp := order.DeleteOrder(db)
 
 	utils.Respond(rw, resp)
-
 }
 
 func DeleteOrderWithID(db *mongo.Database, rw http.ResponseWriter, r *http.Request) {
