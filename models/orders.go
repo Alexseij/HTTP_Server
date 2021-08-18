@@ -16,7 +16,9 @@ type Order struct {
 	Description string             `json:"description" bson:"description"`
 	Name        string             `json:"name" bson:"name"`
 	From        string             `json:"from" bson:"from"`
+	Provider    string             `json:"provider" bson:"provider"`
 	Destination string             `json:"destination" bson:"destination"`
+	Status      bool               `json:"status" bson:"status"`
 	TimeCreate  primitive.DateTime `bson:"time_create,omitempty"`
 	TimeUpdate  primitive.DateTime `bson:"time_update,omitempty"`
 }
@@ -100,7 +102,7 @@ func GetOrders(db *mongo.Database) ([]*Order, error) {
 	return orders, nil
 }
 
-func GetOrdersForCurrentUser(db *mongo.Database, email string) ([]*Order, error) {
+func GetOrdersForCurrentConsumer(db *mongo.Database, email string) ([]*Order, error) {
 	ordersCollection := db.Collection("orders")
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
@@ -108,7 +110,27 @@ func GetOrdersForCurrentUser(db *mongo.Database, email string) ([]*Order, error)
 
 	var orders []*Order
 
-	cursor, err := ordersCollection.Find(ctx, bson.M{"from": email})
+	cursor, err := ordersCollection.Find(ctx, bson.M{"status": false, "from": email})
+	if err != nil {
+		return nil, err
+	}
+
+	if err := cursor.All(ctx, &orders); err != nil {
+		return nil, err
+	}
+
+	return orders, nil
+}
+
+func GetOrdersForCurrentProvider(db *mongo.Database, email string) ([]*Order, error) {
+	ordersCollection := db.Collection("orders")
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	defer cancel()
+
+	var orders []*Order
+
+	cursor, err := ordersCollection.Find(ctx, bson.M{"from": bson.M{"$ne": email}, "status": false})
 	if err != nil {
 		return nil, err
 	}

@@ -57,13 +57,14 @@ func (a *App) Init(dbUser, dbPassword, dbHost, dbName string) {
 }
 
 func (a *App) setHandlers() {
-	a.Post("/api/order/make", a.handleReq(order.MakeOrder))
+	a.Post("/api/orderMake", a.handleReq(order.MakeOrder))
 	a.Delete("/api/order/delete/{orderID}", a.handleReq(order.DeleteOrderWithID))
-	a.Put("/api/order/update", a.handleReq(order.UpdateOrder))
+	a.Put("/api/orderUpdate", a.handleReq(order.UpdateOrder))
 	a.Get("/api/user/login/{token}", a.handleReq(auth.LoginUser))
 	a.Get("/api/order/{orderID}", a.handleReq(order.GetOrder))
-	a.Get("/api/AllOrders", a.handleReq(order.GetOrders))
-	a.Get("/api/GetOrdersForCurrentUser/{email}", a.handleReq(order.DeleteOrderWithID))
+	a.Get("/api/user/getCurrentRating/{email}", a.handleReq(users.GetCurrentRating))
+	a.Get("/api/GetOrdersForCurrentProvider/{email}", a.handleReq(order.GetOrdersForCurrentProvider))
+	a.Get("/api/GetOrdersForCurrentConsumer/{email}", a.handleReq(order.GetOrdersForCurrentConsumer))
 	a.Put("/api/user/{email}/rating/{rating}", a.handleReq(users.UpdateRating))
 }
 

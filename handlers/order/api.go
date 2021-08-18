@@ -17,6 +17,7 @@ func MakeOrder(db *mongo.Database, rw http.ResponseWriter, r *http.Request) {
 	order := &models.Order{}
 
 	if err := json.NewDecoder(r.Body).Decode(order); err != nil {
+		log.Print(err)
 		utils.Respond(rw, utils.Message(false, "Invalid request"))
 		return
 	}
@@ -89,6 +90,7 @@ func UpdateOrder(db *mongo.Database, rw http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Print("file : order/api.go , UpdateOrder() : ", err)
 		utils.Respond(rw, utils.Message(false, "Invalid getting order"))
+		return
 	}
 
 	resp := currentOrder.UpdateOrder(db, updateOrder)
@@ -109,12 +111,27 @@ func GetOrders(db *mongo.Database, rw http.ResponseWriter, r *http.Request) {
 	utils.Respond(rw, resp)
 }
 
-func GetOrdersForCurrentUser(db *mongo.Database, rw http.ResponseWriter, r *http.Request) {
+func GetOrdersForCurrentConsumer(db *mongo.Database, rw http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 
-	orders, err := models.GetOrdersForCurrentUser(db, vars["email"])
+	orders, err := models.GetOrdersForCurrentConsumer(db, vars["email"])
 	if err != nil {
-		log.Print("file : orders/api.go , GetOrdersForCurrentUser() : ", err)
+		log.Print("file : orders/api.go , GetOrdersForCurrenConsumer() : ", err)
+		utils.Respond(rw, utils.Message(false, "Ivalid request"))
+		return
+	}
+
+	resp := utils.Message(true, "Success")
+	resp["orders"] = orders
+	utils.Respond(rw, resp)
+}
+
+func GetOrdersForCurrentProvider(db *mongo.Database, rw http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+
+	orders, err := models.GetOrdersForCurrentProvider(db, vars["email"])
+	if err != nil {
+		log.Print("file : orders/api.go , GetOrdersForCurrentProvider() : ", err)
 		utils.Respond(rw, utils.Message(false, "Invalid request"))
 		return
 	}
@@ -148,13 +165,7 @@ func GetOrder(db *mongo.Database, rw http.ResponseWriter, r *http.Request) {
 	}
 
 	resp := utils.Message(true, "Order was found")
-	resp["id"] = vars["orderID"]
-	resp["description"] = order.Description
-	resp["name"] = order.Name
-	resp["from"] = order.From
-	resp["destination"] = order.Destination
-	resp["time_create"] = order.TimeCreate
-	resp["time_update"] = order.TimeUpdate
+	resp["order"] = order
 
 	utils.Respond(rw, resp)
 }
