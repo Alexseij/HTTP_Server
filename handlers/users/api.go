@@ -11,6 +11,20 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
+func GetUser(db *mongo.Database, rw http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+
+	user, err := models.GetUser(db, vars["email"])
+	if err != nil {
+		utils.Respond(rw, utils.Message(false, "Ivalid getting user operation"))
+		return
+	}
+
+	resp := utils.Message(true, "Success")
+	resp["user"] = user
+	utils.Respond(rw, resp)
+}
+
 func UpdateRating(db *mongo.Database, rw http.ResponseWriter, r *http.Request) {
 
 	vars := mux.Vars(r)

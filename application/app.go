@@ -65,7 +65,9 @@ func (a *App) setHandlers() {
 	a.Get("/api/user/getCurrentRating/{email}", a.handleReq(users.GetCurrentRating))
 	a.Get("/api/GetOrdersForCurrentProvider/{email}", a.handleReq(order.GetOrdersForCurrentProvider))
 	a.Get("/api/GetOrdersForCurrentConsumer/{email}", a.handleReq(order.GetOrdersForCurrentConsumer))
+	a.Get("/api/getUser/{email}", a.handleReq(users.GetUser))
 	a.Put("/api/user/{email}/rating/{rating}", a.handleReq(users.UpdateRating))
+
 }
 
 func (a *App) Get(path string, handler func(http.ResponseWriter, *http.Request)) {
