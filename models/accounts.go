@@ -4,10 +4,8 @@ import (
 	"context"
 	"log"
 	"os"
-	"strconv"
 	"time"
 
-	"cloud.google.com/go/pubsub"
 	"github.com/Alexseij/server/utils"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -15,10 +13,12 @@ import (
 )
 
 type User struct {
-	Token  string `json:"token" bson:"token"`
-	Rating int    `json:"rating" bson:"rating"`
-	Name   string `json:"name" bson:"name"`
-	Email  string `json:"email" bson:"email"`
+	Token          string `json:"token" bson:"token"`
+	ConsumerRating int    `json:"consumer_rating" bson:"consumer_rating"`
+	ProviderRating int    `json:"provider_rating" bson:"provider_rating"`
+	Name           string `json:"name" bson:"name"`
+	Email          string `json:"email" bson:"email"`
+	NowProvider    bool   `json:"now_provider" bson:"now_provider"`
 }
 
 const (
@@ -96,7 +96,9 @@ func LoginUser(db *mongo.Database, token string) map[string]interface{} {
 		user = &User{}
 		user.Email = payload.Claims["email"].(string)
 		user.Name = payload.Claims["name"].(string)
-		user.Rating = DefaultRating
+		user.ConsumerRating = DefaultRating
+		user.ProviderRating = DefaultRating
+		user.NowProvider = false
 		user.Token = token
 
 		if err := user.createUser(db); err != nil {
@@ -111,31 +113,6 @@ func LoginUser(db *mongo.Database, token string) map[string]interface{} {
 	return resp
 }
 
-func publishToRatingTopic(topicName, projectID, message string) error {
-	ctx := context.Background()
-
-	client, err := pubsub.NewClient(ctx, projectID)
-	if err != nil {
-		return err
-	}
-	defer client.Close()
-
-	topic := client.Topic(topicName)
-
-	result := topic.Publish(ctx, &pubsub.Message{
-		Data: []byte(message),
-	})
-
-	id, err := result.Get(ctx)
-
-	if err != nil {
-		return err
-	}
-
-	log.Print("Published msg with ID : ", id)
-	return nil
-}
-
 func (u *User) UpdateRating(db *mongo.Database, currentRating int, topicName, projectID string) map[string]interface{} {
 	usersCollection := db.Collection("users")
 
@@ -146,11 +123,6 @@ func (u *User) UpdateRating(db *mongo.Database, currentRating int, topicName, pr
 	if err != nil {
 		log.Print("file accounts.go , UpdateRating() : ", err)
 		return utils.Message(false, "Incorrect update query to database")
-	}
-
-	if err = publishToRatingTopic(topicName, projectID, strconv.Itoa(currentRating)); err != nil {
-		log.Print(err)
-		return utils.Message(false, "Cant send message to pub/sub service")
 	}
 
 	return utils.Message(true, "Successful update")

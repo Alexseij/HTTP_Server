@@ -36,3 +36,23 @@ func UpdateRating(db *mongo.Database, rw http.ResponseWriter, r *http.Request) {
 
 	utils.Respond(rw, resp)
 }
+
+func GetCurrentRating(db *mongo.Database, rw http.ResponseWriter, r *http.Request) {
+
+	vars := mux.Vars(r)
+
+	user, err := models.GetUser(db, vars["email"])
+	if err != nil {
+		utils.Respond(rw, utils.Message(false, "ivalid getting user operation"))
+	}
+
+	if user == nil {
+		utils.Respond(rw, utils.Message(false, "User is empty"))
+	}
+
+	resp := utils.Message(true, "Success")
+	resp["rating"] = user.ConsumerRating
+
+	utils.Respond(rw, resp)
+
+}
