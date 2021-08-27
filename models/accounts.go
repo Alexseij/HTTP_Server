@@ -128,3 +128,31 @@ func (u *User) UpdateRating(db *mongo.Database, currentRating int, topicName, pr
 	return utils.Message(true, "Successful update")
 
 }
+
+func GetRatingConsumer(db *mongo.Database, email string) map[string]interface{} {
+
+	user, err := GetUser(db, email)
+	if err != nil {
+		log.Print("file accounts.go , GetRatingConsumer() : ", err)
+		return utils.Message(false, "Fail with getting user")
+	}
+
+	resp := utils.Message(true, "Success")
+	resp["rating"] = user.ConsumerRating
+
+	return resp
+}
+
+func GetRatingProvider(db *mongo.Database, email string) map[string]interface{} {
+
+	user, err := GetUser(db, email)
+	if err != nil {
+		log.Print("file accounts.go , GetRatingConsumer() : ", err)
+		return utils.Message(false, "Fail with getting user")
+	}
+
+	resp := utils.Message(true, "Success")
+	resp["rating"] = user.ProviderRating
+
+	return resp
+}

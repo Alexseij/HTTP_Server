@@ -13,6 +13,10 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
+const (
+	delay = time.Minute * 2
+)
+
 func MakeOrder(db *mongo.Database, rw http.ResponseWriter, r *http.Request) {
 	order := &models.Order{}
 
@@ -26,7 +30,7 @@ func MakeOrder(db *mongo.Database, rw http.ResponseWriter, r *http.Request) {
 	utils.Respond(rw, resp)
 
 	if resp["status"].(bool) {
-		go deleteOrderAfterDelay(db, time.Minute*2, resp["id"].(primitive.ObjectID), rw)
+		go deleteOrderAfterDelay(db, delay, resp["id"].(primitive.ObjectID), rw)
 	}
 
 }
@@ -47,8 +51,12 @@ func deleteOrder(db *mongo.Database, rw http.ResponseWriter, orderID primitive.O
 		utils.Respond(rw, utils.Message(false, "Order alreay deleted"))
 		return
 	}
-	if order.Status {
+	if order.Status != models.ORDER_WAITING && order.Status != models.ORDER_CANCELLED && order.Status != models.ORDER_END {
 		utils.Respond(rw, utils.Message(false, "Cant delete order"))
+		return
+	}
+	if order.Status == models.ORDER_CANCELLED {
+		go deleteOrderAfterDelay(db, delay, orderID, rw)
 		return
 	}
 	resp := order.DeleteOrder(db)
@@ -78,6 +86,8 @@ func UpdateOrder(db *mongo.Database, rw http.ResponseWriter, r *http.Request) {
 		utils.Respond(rw, utils.Message(false, "Ivalid request"))
 		return
 	}
+
+	log.Print(updateOrder)
 
 	currentOrder, err := models.GetOrder(db, updateOrder.OrderID)
 	if err != nil {

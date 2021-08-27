@@ -11,6 +11,17 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
+type status int
+
+const (
+	ORDER_WAITING status = iota
+	ORDER_WAITING_FOR_ANSWER
+	ORDER_ACCESS
+	ORDER_COMMING
+	ORDER_END
+	ORDER_CANCELLED
+)
+
 type Order struct {
 	OrderID     primitive.ObjectID `json:"id,omitempty" bson:"_id"`
 	Description string             `json:"description" bson:"description"`
@@ -18,7 +29,8 @@ type Order struct {
 	From        string             `json:"from" bson:"from"`
 	Provider    string             `json:"provider" bson:"provider"`
 	Destination string             `json:"destination" bson:"destination"`
-	Status      bool               `json:"status" bson:"status"`
+	Status      status             `json:"status" bson:"status"`
+	Price       int64              `json:"price" bson:"price"`
 	TimeCreate  primitive.DateTime `bson:"time_create,omitempty"`
 	TimeUpdate  primitive.DateTime `bson:"time_update,omitempty"`
 }
@@ -110,7 +122,7 @@ func GetOrdersForCurrentConsumer(db *mongo.Database, email string) ([]*Order, er
 
 	var orders []*Order
 
-	cursor, err := ordersCollection.Find(ctx, bson.M{"status": false, "from": email})
+	cursor, err := ordersCollection.Find(ctx, bson.M{"status": bson.M{"$ne": ORDER_END}, "from": email})
 	if err != nil {
 		return nil, err
 	}
@@ -130,7 +142,7 @@ func GetOrdersForCurrentProvider(db *mongo.Database, email string) ([]*Order, er
 
 	var orders []*Order
 
-	cursor, err := ordersCollection.Find(ctx, bson.M{"from": bson.M{"$ne": email}, "status": false})
+	cursor, err := ordersCollection.Find(ctx, bson.M{"from": bson.M{"$ne": email}, "status": ORDER_WAITING})
 	if err != nil {
 		return nil, err
 	}
