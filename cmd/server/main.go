@@ -12,13 +12,15 @@ import (
 	"time"
 
 	"github.com/Alexseij/server/application"
+	"github.com/Alexseij/server/config"
+	"github.com/joho/godotenv"
 )
 
 var (
 	Version = "1.0.0"
 )
 
-//var flagCfg = flag.String("config", "config/local.yml", "Config for starting server")
+var flagCfg = flag.String("config", "config/local.yml", "Config for starting server")
 
 func main() {
 
@@ -26,17 +28,23 @@ func main() {
 
 	application := &application.App{}
 
-	// cfg, err := config.LoadCfg(*flagCfg)
-	// if err != nil {
-	// 	log.Fatal("error to connect with cfg : ", err)
-	// }
+	cfg, err := config.LoadCfg(*flagCfg)
+	if err != nil {
+		log.Fatal("error to connect with cfg : ", err)
+	}
 
-	// if err := godotenv.Load(); err != nil {
-	// 	log.Fatal("error with loading .env file : ", err)
-	// }
+	if err := godotenv.Load(); err != nil {
+		log.Fatal("error with loading .env file : ", err)
+	}
 
-	application.Init(os.Getenv("db_user"), os.Getenv("db_password"), os.Getenv("db_host"), os.Getenv("db_name"))
-	addr := fmt.Sprintf(":8080")
+	application.Init(cfg.DBUser, cfg.DBPassword, cfg.DBHost, cfg.DBName)
+
+	port := os.Getenv("PORT")
+	var addr string
+	if port == "" {
+		addr = ":8080"
+	}
+	addr = fmt.Sprintf(":%s", port)
 
 	server := &http.Server{
 		Addr:         addr,

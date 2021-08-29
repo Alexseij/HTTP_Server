@@ -7,10 +7,9 @@ RUN go mod download
 
 COPY . ./
 
-WORKDIR cmd
-WORKDIR server
+WORKDIR /app/cmd/server
 
-RUN go build -v -o server
+RUN go build
 
 WORKDIR /app
 
@@ -19,15 +18,11 @@ RUN set -x && apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -
     ca-certificates && \
     rm -rf /var/lib/apt/lists/*
 
-COPY --from=builder /app/cmd/server /app/cmd/server
+WORKDIR /app
 
-ENV db_name=FoodFinder
-ENV db_user=FoodFinder
-ENV db_password=h159357258654
-ENV db_host=cluster0.su8jg.mongodb.net
-ENV port=8000
-ENV host=localhost
+COPY --from=builder /app/cmd/server cmd/server
+COPY --from=builder /app/config config
 
-EXPOSE 8080
+WORKDIR /app/cmd/server
 
-CMD ["/app/cmd/server/server"]
+RUN ["./server"]
